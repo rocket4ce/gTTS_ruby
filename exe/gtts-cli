@@ -1,0 +1,84 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+require "gtts"
+require "optparse"
+
+options = {
+  tld: "com",
+  lang: "en",
+  slow: false,
+  lang_check: true,
+  output: "output.mp3"
+}
+
+OptionParser.new do |opts|
+  opts.banner = "Usage: gtts-cli [options] 'text to speak'"
+
+  opts.on("-f", "--file FILE", "Read text from file") do |file|
+    options[:file] = file
+  end
+
+  opts.on("-o", "--output FILE", "Output file (default: output.mp3)") do |file|
+    options[:output] = file
+  end
+
+  opts.on("-l", "--lang LANG", "Language (default: en)") do |lang|
+    options[:lang] = lang
+  end
+
+  opts.on("-t", "--tld TLD", "Top-level domain for google translate (default: com)") do |tld|
+    options[:tld] = tld
+  end
+
+  opts.on("-s", "--slow", "Speak more slowly") do
+    options[:slow] = true
+  end
+
+  opts.on("--list-langs", "List available languages") do
+    puts "\nLanguage codes:"
+    Gtts.languages.each do |code, name|
+      puts "#{code}\t#{name}"
+    end
+    exit
+  end
+
+  opts.on("--debug", "Debug mode") do
+    options[:debug] = true
+  end
+
+  opts.on("-h", "--help", "Show this help message") do
+    puts opts
+    exit
+  end
+end.parse!
+
+begin
+  text = if options[:file]
+    File.read(options[:file])
+  elsif !ARGV.empty?
+    ARGV.join(" ")
+  else
+    puts "Error: No text provided. Use --help for usage information."
+    exit 1
+  end
+
+  tts = Gtts::GTTS.new(
+    text,
+    tld: options[:tld],
+    lang: options[:lang],
+    slow: options[:slow],
+    lang_check: options[:lang_check]
+  )
+
+  tts.save(options[:output])
+  puts "Successfully saved to #{options[:output]}"
+
+rescue Gtts::GttsError, ArgumentError => e
+  puts "Error: #{e.message}"
+  exit 1
+rescue StandardError => e
+  puts "Unknown error: #{e.message}"
+  puts e.backtrace if options[:debug]
+  exit 1
+end
